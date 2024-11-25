@@ -1,8 +1,7 @@
 const readXlsxFile = require('read-excel-file/node');
+const XLSX = require('xlsx')
 
-readXlsxFile('./data/resultados_2024/inscrições-CSE-1-et-rank-SHPA-2024.xlsx', {sheet: 'P1'}).then((data) => {
-    //const fields = data.slice(5,6)[0];
-    
+const printData = (data) => {
     console.log('data lengh', data.length);
 
     const firstIndex = data.findIndex((item) => {
@@ -88,7 +87,24 @@ readXlsxFile('./data/resultados_2024/inscrições-CSE-1-et-rank-SHPA-2024.xlsx',
     //console.log(result);
     const finalResult = [...result, ...moreResults]
     console.log('finalResult: ', finalResult);
+}
+
+
+const path = './data/resultados_2024/inscrições-CSE-1-et-rank-SHPA-2024.xlsx';
+const sheets = XLSX.readFile(path).SheetNames.filter((item) => /^P\d+$/.test(item));
+console.log('sheets names: ', sheets);
+
+sheets.forEach((sheet) => {
+    readXlsxFile(path, {sheet}).then((data) => {
+        console.log('SHEET: ', sheet);
+        console.log('\n');
+        printData(data);
+    })
 })
+
+/* readXlsxFile(path, {sheet: 'P10'}).then((data) => {
+    printData(data);
+}) */
 
 
 // {rows: []{}, errors: []{}}
