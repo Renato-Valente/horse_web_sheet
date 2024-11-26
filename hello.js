@@ -1,5 +1,6 @@
 const readXlsxFile = require('read-excel-file/node');
-const XLSX = require('xlsx')
+const XLSX = require('xlsx');
+const fs = require('fs');
 
 const printData = (data) => {
     console.log('data lengh', data.length);
@@ -89,22 +90,45 @@ const printData = (data) => {
     console.log('finalResult: ', finalResult);
 }
 
+const listFiles = (path) => {
+    fs.readdir(path, (err, files) => {
+        if(err){
+            console.err('erro ao tentar ler arquivos', err);
+        }
+        else{
+            files.forEach((file) => {
+                const fullPath = path + '/' + file;
 
-const path = './data/resultados_2024/inscrições-CSE-1-et-rank-SHPA-2024.xlsx';
-const sheets = XLSX.readFile(path).SheetNames.filter((item) => /^P\d+$/.test(item));
-console.log('sheets names: ', sheets);
+                fs.stat(fullPath, (err, stats) => {
+                    if(err){
+                        console.log('deu tudo errado :(', err);
+                    }
+                    else{
+                        if(stats.isDirectory()){
+                            listFiles(fullPath);
+                        }
+                        else{
+                            const sheets = XLSX.readFile(fullPath).SheetNames.filter((item) => /^P\d+$/.test(item));
+                            console.log('Planilhas do arquivo: ', fullPath);
+                            console.log(sheets);
 
-sheets.forEach((sheet) => {
-    readXlsxFile(path, {sheet}).then((data) => {
-        console.log('SHEET: ', sheet);
-        console.log('\n');
-        printData(data);
+                            sheets.forEach((sheet) => {
+                                readXlsxFile(fullPath, {sheet}).then((data) => {
+                                    console.log('SHEET: ', sheet);
+                                    console.log('arquivo: ', fullPath);
+                                    console.log('//////////////////////////////////////////////////////////////////////\n');
+                                    printData(data);
+                                })
+                            })
+
+                        }
+                    }
+                })
+            })
+        }
     })
-})
+}
 
-/* readXlsxFile(path, {sheet: 'P10'}).then((data) => {
-    printData(data);
-}) */
-
+listFiles('./data');
 
 // {rows: []{}, errors: []{}}
