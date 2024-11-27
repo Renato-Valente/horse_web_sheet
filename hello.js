@@ -1,9 +1,18 @@
 const readXlsxFile = require('read-excel-file/node');
 const XLSX = require('xlsx');
 const fs = require('fs');
+const PATH = require('path');
 
-const printData = (data) => {
-    console.log('data lengh', data.length);
+const printData = (args) => {
+    const { data, fullPath, sheet } = args;
+    const path = args.path;
+    //console.log('data lengh', data.length);
+    //console.log('SHEET: ', sheet);
+    console.log('arquivo: ', fullPath);
+    const basename = PATH.basename(fullPath);
+    //console.log('nome do arquivo: ', PATH.basename(fullPath));
+    console.log('path: ', path);
+    console.log('//////////////////////////////////////////////////////////////////////\n');
 
     const firstIndex = data.findIndex((item) => {
         return (
@@ -86,8 +95,25 @@ const printData = (data) => {
     })
     //console.log('data', data);
     //console.log(result);
-    const finalResult = [...result, ...moreResults]
-    console.log('finalResult: ', finalResult);
+    
+    const finalResult = [...result, ...moreResults];
+
+    const dir =`./results/${basename.slice(0,-5)}`;
+    const filePath = dir + `/${sheet}.txt`;
+
+    fs.mkdir(dir, {recursive: true}, (err) => {
+        if(err){
+            console.log(`erro ao tentar criar diretorio ${dir}`, err);
+        } else{
+            fs.writeFile(filePath, JSON.stringify(finalResult), (err) => {
+                if(err){
+                    console.log(`Erro ao criar arquivo ${filePath}`);
+                }
+            })
+        }
+    })
+
+    //console.log('finalResult: ', finalResult);
 }
 
 const listFiles = (path) => {
@@ -108,16 +134,16 @@ const listFiles = (path) => {
                             listFiles(fullPath);
                         }
                         else{
+                            const basename = PATH.basename(fullPath);
+                            if(!/.xlsx$/.test(basename)) return;
                             const sheets = XLSX.readFile(fullPath).SheetNames.filter((item) => /^P\d+$/.test(item));
                             console.log('Planilhas do arquivo: ', fullPath);
+                            console.log('valor de path: ', path);
                             console.log(sheets);
-
+                            
                             sheets.forEach((sheet) => {
                                 readXlsxFile(fullPath, {sheet}).then((data) => {
-                                    console.log('SHEET: ', sheet);
-                                    console.log('arquivo: ', fullPath);
-                                    console.log('//////////////////////////////////////////////////////////////////////\n');
-                                    printData(data);
+                                    printData({data, fullPath, sheet, path});
                                 })
                             })
 
