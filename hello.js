@@ -3,6 +3,57 @@ const XLSX = require('xlsx');
 const fs = require('fs');
 const PATH = require('path');
 
+
+
+const format_row = (row, info) => {
+    
+    const result = {};
+    result.id = null;
+    result.competicao = info.competicao ? info.competicao : 'Não informado';
+    result.category = row['CAT.'] ? row['CAT.'] : 'Não informado';
+    result.ano_prova = info.data ? info.data.slice(-4) : 'Não informado';
+
+    result.dados_prova = {
+        categoria: info.sheet ? info.sheet : 'Não informado',
+        altura_salto: info.altura_salto ? info.altura_salto : 'Não informado',
+        tipo_percurso: info.tipo_percurso ? info.tipo_percurso : 'Não informado',
+        hora: info.hora ? info.hora : 'Não informado',
+        data: info.data ? info.data : 'Não informado',
+    }
+
+    result.classification = row.CL ? row.CL : 'Não informado';
+
+    result.competitorInfo = {
+        competitor: row.CONCORRENTE ? row.CONCORRENTE : 'Não informado',
+        entity: row['ENT.'] ? row['ENT.'] : 'Não informado',
+        country: null
+    }
+
+    result.cavalo = {
+        name: row.CAVALO,
+        birth_date: null,
+        sex: null,
+        race: null,
+        owner: row.CONCORRENTE ? row.CONCORRENTE : 'Não informado'
+    }
+
+//    result.fouls = row.PTS ? row.PTS : 'Não informado';
+    if(row.PTS == undefined || row.PTS == null) {
+        result.fouls = 'Não informado'
+    }
+    else{ result.fouls = row.PTS }
+
+    if(result.fouls == 'FF') result.fouls = 'Forfait';
+    if(result.fouls == 'EL') result.fouls = 'Eliminado';
+
+    result.time = row.TEMPO ? row.TEMPO : 'Não informado';
+    result.federation = 'TODO';
+
+    
+
+    return result;
+}
+
 const printData = (args) => {
     const { data, fullPath, sheet } = args;
     const path = args.path;
@@ -36,7 +87,57 @@ const printData = (args) => {
     //com os valores das colunas repetidas
     const moreResults = [];
 
+
+    //info deve guardar informacoes adicionais (competicao, ano_prova, categoria, etc)
+        //para serem passadas na funcao format_row
+        const info = {};
+        info.sheet = sheet;
+
+        //capturando o valor de competição ex: CONCURSO DE SALTO ESTADUAL....
+        const competicao_line = data.find((item) => {
+            if (!item) return false;
+            let hasText = false;
+            item.forEach((i) => {
+                if(i) {hasText = true};
+            })
+            return hasText;
+        })
+        console.log('valor de competicao: ', competicao_line);
+
+        info.competicao = competicao_line.find((item) => {
+            return item;
+        }).toString();
+
+        //capturando o valor de hora ex: 9h30min
+         const hora = data.find((line) => {
+            const text = line.toString();
+            if(!text) return false;
+            return /\d{1,2}h\d{2}min/.test(text);
+            //return text.match(/(\d{1,2}h\d{2}min)/g)
+        });
+
+        info.hora = hora ? hora.toString().match(/(\d{1,2}h\d{2}min)/g) : null;
+
+        //capturando o valor de altura_salto ex: 1,10m
+        const altura = data.find((line) => {
+            const text = line.toString();
+            if(!text) return false;
+            return /\d{1},\d{2}m/.test(text)
+        })
+        info.altura_salto = altura ? altura.toString().match(/(\d{1},\d{2}m)/g)[0] : null;
+
+        //capturando o valor da data dd/mm/aaaa
+        const index = data.findIndex((line) => {
+            if(!line.toString()) return false;
+            const date = line.toString().match(/(\d{2}\/\d{2}\/\d{4})/);
+            if(date) return true;
+        })
+        info.data = index >= 0 ? data[index].toString().match(/(\d{2}\/\d{2}\/\d{4})/)[0] : null; 
+
+
     const result = data.slice(firstIndex + 1, lastIndex).map((item) => {
+
+
         const row = {};
         //buffer guarda o nome dos campos jah atribuidos
         //para ajudar a evitar campos repetidos
@@ -56,7 +157,7 @@ const printData = (args) => {
                 repeatedValues.push({column: i, value: item[index]});
             }
         })
-        if (!repeatedValues.length > 0) return row; //tabela sem colunas repetidas
+        if (!repeatedValues.length > 0) return format_row(row, info); //tabela sem colunas repetidas
 
         //aqui nos criamos um clone de row e trocamos o valor
         //das colunas repetidas
@@ -65,7 +166,7 @@ const printData = (args) => {
             secondRow[item.column] = item.value;
         })
         moreResults.push(secondRow);
-        return row;
+        return format_row(row, info);
     })
     //um array com todas as colunas possiveis da tabela
     const possibleFields = [
@@ -99,13 +200,13 @@ const printData = (args) => {
     const finalResult = [...result, ...moreResults];
 
     const dir =`./results/${basename.slice(0,-5)}`;
-    const filePath = dir + `/${sheet}.txt`;
+    const filePath = dir + `/${sheet}.json`;
 
     fs.mkdir(dir, {recursive: true}, (err) => {
         if(err){
             console.log(`erro ao tentar criar diretorio ${dir}`, err);
         } else{
-            fs.writeFile(filePath, JSON.stringify(finalResult), (err) => {
+            fs.writeFile(filePath, JSON.stringify(finalResult,null,2), (err) => {
                 if(err){
                     console.log(`Erro ao criar arquivo ${filePath}`);
                 }
@@ -156,5 +257,3 @@ const listFiles = (path) => {
 }
 
 listFiles('./data');
-
-// {rows: []{}, errors: []{}}
