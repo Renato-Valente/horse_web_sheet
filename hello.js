@@ -165,7 +165,7 @@ const printData = (args) => {
         repeatedValues.forEach((item) => {
             secondRow[item.column] = item.value;
         })
-        moreResults.push(secondRow);
+        moreResults.push(format_row(secondRow, info));
         return format_row(row, info);
     })
     //um array com todas as colunas possiveis da tabela
